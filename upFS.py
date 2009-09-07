@@ -1,8 +1,6 @@
 #!/usr/bin/python -O
 # -*- coding: utf-8 -*-
 
-# todo
-
 import os, stat, errno, sys, random
 import MySQLdb
 from time import time
