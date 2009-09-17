@@ -1,14 +1,11 @@
 #!/usr/bin/python -O
 # -*- coding: utf-8 -*-
 
-import os, stat, errno, sys, random
-import MySQLdb
+import os, stat, errno, sys, random, MySQLdb, hashlib
 from time import time
 from subprocess import *
 from tempfile import NamedTemporaryFile
-import hashlib
 
-# pull in some spaghetti to make this stuff work without fuse-py being installed
 try:
     import _find_fuse_parts
 except ImportError:
@@ -43,7 +40,7 @@ class userFile():
 		self.id = id
 		self.filename_fuse = filename_fuse
 		self.filename = filename
-		self.size = size
+		self.size = int(size)
 		self.location = location
 		self.sub_location = sub_location
 		self.hidden = hidden
@@ -199,9 +196,10 @@ class UP():
 			return
 
 		oldName = open_file.uploadName
-		file = self.get_file_from_path(open_file.path)
 
 		try:
+			file = self.get_file_from_path(open_file.path)
+
 			# get size
 			o_stat = os.stat(oldName)
 
