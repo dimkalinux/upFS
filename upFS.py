@@ -595,7 +595,7 @@ class UP():
 		# open file for writing
 		try:
 			storeDir = self.get_upload_path()
-			fullpath = '/var/upload/' +str(storeDir) + '/tmp_up'
+			fullpath = '/var/upload/' + str(storeDir) + '/tmp_up'
 			o_file = NamedTemporaryFile(mode='w',suffix='.tmp',dir=fullpath,delete=False)
 			o_fd = o_file.fileno()
 		except:
