@@ -275,7 +275,7 @@ class UP():
 
 
 
-	def rename_file(self, oldPath, newPath):
+	def renameFile(self, oldPath, newPath):
 		pf = oldPath.split('/')[1:]
 		if len(pf) != 2 and len(pf) != 3:
 			raise 'rename: invalid level from '
@@ -798,7 +798,7 @@ class upFS(Fuse):
 	def rename(self, pathfrom, pathto):
 		self.log.debug('rename: ' + pathfrom)
 		try:
-			self.up.rename_file(pathfrom, pathto)
+			self.up.renameFile(pathfrom, pathto)
 		except:
 			self.log.error('rename: ' + pathfrom)
 			return -errno.ENOENT
