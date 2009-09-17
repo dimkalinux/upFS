@@ -224,6 +224,8 @@ class UP():
 				if _f.filename == filename:
 					_f.size = size
 					_f.hidden = hidden
+					_f.location = justName
+					_f.sub_location = sub_location
 					break
 
 			# add file to DB
@@ -247,7 +249,6 @@ class UP():
 					break
 
 			self.log.debug('after INSERT: ')
-
 
 
 		except:
@@ -376,6 +377,7 @@ class UP():
 				file_id = file[0]
 
 		return file_id
+
 
 	def get_user_id(self, username):
 		if username in self.users:
