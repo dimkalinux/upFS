@@ -575,7 +575,7 @@ class UP():
 			return False
 
 
-	def create_file(self, path):
+	def createFile(self, path):
 		if self.is_user_file(path):
 			return -errno.ENOSYS
 
@@ -599,7 +599,7 @@ class UP():
 			o_file = NamedTemporaryFile(mode='w',suffix='.tmp',dir=fullpath,delete=False)
 			o_fd = o_file.fileno()
 		except:
-			self.log.error('create_file: cant open new file: ')
+			self.log.error('createFile: cant open new file: ')
 			raise
 		else:
 			of = openFile(username, o_fd, 0, o_file, path, True, o_file.name, storeDir)
@@ -687,7 +687,7 @@ class upFS(Fuse):
 	def create(self, path, mode, fi=None):
 		self.log.debug('need create: ' + path)
 		try:
-			self.up.create_file(path)
+			self.up.createFile(path)
 		except:
 			self.log.error('create: ' + path)
 
