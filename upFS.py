@@ -113,24 +113,24 @@ class UP():
 		pass
 
 
-	def get_file_from_path(self, path):
+	def getFileFromPath(self, path):
 		file = {}
 		pe = path.split('/')[1:]
 		level = len(pe)
 
 		if level == 1:
-			raise 'get_file_from_path: invalid path level'
+			raise 'getFileFromPath: invalid path level'
 		elif level == 2:
 			file['username'] = pe[0]
 			file['filename'] = pe[1]
 		elif level == 3:
 			if pe[1] != '__hidden__':
-				raise IOError('get_file_from_path invalid dir in userdir')
+				raise IOError('getFileFromPath invalid dir in userdir')
 			else:
 				file['username'] = pe[0]
 				file['filename'] = pe[2]
 		else:
-			raise 'get_file_from_path: invalid path level'
+			raise 'getFileFromPath: invalid path level'
 
 		return file
 
@@ -147,7 +147,7 @@ class UP():
 		file = self.get_file_info(path)
 		fullpath = '/var/upload/' + str(file.sub_location) + '/' + file.location
 		try:
-			fileFromPath = self.get_file_from_path(path)
+			fileFromPath = self.getFileFromPath(path)
 			username = fileFromPath['username']
 			filename = fileFromPath['filename']
 
@@ -198,7 +198,7 @@ class UP():
 		oldName = open_file.uploadName
 
 		try:
-			file = self.get_file_from_path(open_file.path)
+			file = self.getFileFromPath(open_file.path)
 
 			# get size
 			o_stat = os.stat(oldName)
@@ -286,11 +286,11 @@ class UP():
 
 
 		try:
-			_f = self.get_file_from_path(oldPath)
+			_f = self.getFileFromPath(oldPath)
 			username = _f['username']
 			oldFilename = _f['filename']
 
-			_t = self.get_file_from_path(newPath)
+			_t = self.getFileFromPath(newPath)
 			newFilename = _t['filename']
 		except:
 			raise
@@ -325,7 +325,7 @@ class UP():
 		if level != 2 and level != 3:
 			raise 'Unlink: invalid level'
 
-		_f = self.get_file_from_path(path)
+		_f = self.getFileFromPath(path)
 		username = _f['username']
 		filename = _f['filename']
 
@@ -469,7 +469,7 @@ class UP():
 
 	def get_file_info(self, path):
 		try:
-			file = self.get_file_from_path(path)
+			file = self.getFileFromPath(path)
 			username = file['username']
 			filename = file['filename']
 		except:
@@ -547,7 +547,7 @@ class UP():
 
 	def is_user_file(self, path):
 		try:
-			file = self.get_file_from_path(path)
+			file = self.getFileFromPath(path)
 			username = file['username']
 			filename = file['filename']
 		except:
@@ -583,7 +583,7 @@ class UP():
 		if len(pe) != 2 and len(pe) != 3:
 			return -errno.ENOSYS
 
-		_f = self.get_file_from_path(path)
+		_f = self.getFileFromPath(path)
 		username = _f['username']
 		filename = _f['filename']
 
@@ -624,7 +624,7 @@ class UP():
 		# get user_id
 		if level > 1:
 			try:
-				file = self.get_file_from_path(path)
+				file = self.getFileFromPath(path)
 				fileOwner = file['username']
 				user_id = self.users[fileOwner]
 				st.st_uid = int(st.st_uid + user_id)
