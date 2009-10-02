@@ -109,8 +109,10 @@ class UP():
 		return 18
 
 
-	def run_system_command(self, command, username):
-		pass
+	def runSystemCommand(self, command):
+		if command == 'readRoot':
+			self.get_users(True)
+
 
 
 	def getFileFromPath(self, path):
@@ -670,12 +672,12 @@ class upFS(Fuse):
 	def chmod(self, path, mode):
 		self.log.debug('chmod: '+path)
 
-		# /__system__/command/user
+		# /__system__/command
 		pe = path.split('/')[1:]
 		level = len(pe)
 
-		if level == 3 and pe[0] == '__system__':
-			self.up.run_system_command(pe[1], pe[2])
+		if level == 2 and pe[0] == '__system__':
+			self.up.runSystemCommand(pe[1])
 
 
 
