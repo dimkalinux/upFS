@@ -211,7 +211,6 @@ class UP():
 			os.chown(newName, 60, 60)
 
 			delete_num = random.randint(99999, 999999999)
-			group_num = str(random.randint(9999, 99999999))
 			sub_location = open_file.storeDir
 			filename = file['filename']
 			size = o_stat.st_size
@@ -232,7 +231,7 @@ class UP():
 			db = upDB()
 
 			c = db.db.cursor()
-			c.execute("INSERT DELAYED INTO up VALUES(NULL, 1, '', %s, NOW(), '0000-00-00 00:00:00', '127.0.0.1', %s, %s, %s, %s, 'application/octet-stream', %s, 0, 7, 0, '', '0000-00-00 00:00:00', '', '', 0, 0, %s, %s, %s)", (delete_num, justName, sub_location, filename, filename, size, hidden, group_num, user_id))
+			c.execute("INSERT DELAYED INTO up VALUES(NULL, '', %s, NOW(), '0000-00-00 00:00:00', '127.0.0.1', %s, %s, %s, %s, 'application/octet-stream', %s, 0, 7, 0, '', '0000-00-00 00:00:00', '', 0, 0, %s, %s)", (delete_num, justName, sub_location, filename, filename, size, hidden, user_id))
 			c.close()
 
 			# update counters
@@ -338,7 +337,7 @@ class UP():
 		try:
 			db = upDB()
 			c = db.db.cursor()
-			c.execute("UPDATE up SET deleted=1, deleted_date=NOW(), deleted_reason=%s WHERE id=%s", ('deleted by owner', file_id,))
+			c.execute("UPDATE up SET deleted=1, deleted_date=NOW(), deleted_reason=%s WHERE id=%s", ('Deleted owner by FTP', file_id,))
 			c.close()
 			db.db.close()
 
