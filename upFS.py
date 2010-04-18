@@ -4,7 +4,7 @@
 import os, stat, errno, sys, random, MySQLdb, hashlib
 from time import time
 from subprocess import *
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkstemp
 
 try:
     import _find_fuse_parts
@@ -23,8 +23,8 @@ fuse.fuse_python_api = (0, 2)
 fuse.feature_assert('has_init')
 
 
-class openFile():
-	def __init__(self, owner, fd=-1, size=0, file=False, path=False, upload=False, uploadName=False, storeDir=False):
+class openFile:
+        def __init__(self, owner, fd=-1, size=0, file=False, path=False, upload=False, uploadName=False, storeDir=False):
 		self.owner = owner
 		self.fd = int(fd)
 		self.size = int(size)
@@ -35,7 +35,7 @@ class openFile():
 		self.storeDir = storeDir
 
 
-class userFile():
+class userFile:
 	def __init__(self, id, filename_fuse, filename, size, location, sub_location, hidden=False):
 		self.id = id
 		self.filename_fuse = filename_fuse
@@ -46,7 +46,7 @@ class userFile():
 		self.hidden = hidden
 
 
-class upLog():
+class upLog:
 	def __init__(self, logFile):
 		self.logFD = open(logFile, 'wb')
 
@@ -61,10 +61,14 @@ class upLog():
 		self.logFD.write('*** ERROR: ' + message + " ***\n")
 
 
-class upDB():
+class upDB:
 	def __init__(self):
 		try:
 			self.db = MySQLdb.connect(host="",user="",passwd="",db="")
+
+			c = self.db.cursor()
+			c.execute("SET NAMES 'latin1'")
+			c.close()
 		except:
 			self.log.error('DB connect error')
 			raise
@@ -85,7 +89,7 @@ class MyStat(fuse.Stat):
 
 
 
-class UP():
+class UP:
 	def __init__(self, log):
 		self.users = {}
 		self.usersTimer = int(time() - 180)
@@ -106,13 +110,12 @@ class UP():
 
 
 	def get_upload_path(self):
-		return 18
+		return 2
 
 
 	def runSystemCommand(self, command):
 		if command == 'readRoot':
 			self.get_users(True)
-
 
 
 	def getFileFromPath(self, path):
@@ -137,8 +140,7 @@ class UP():
 		return file
 
 
-	def open_file(self, path, flags):
-		self.log.debug('open_file: '+path)
+	def openFile(self, path, flags):
 		pe = path.split('/')[1:]
 		level = len(pe)
 
@@ -156,45 +158,38 @@ class UP():
 			o_file = os.fdopen(os.open(fullpath, flags), self.flag2mode(flags))
 			o_fd = o_file.fileno()
 			o_stat = os.fstat(o_fd)
-			self.log.debug('open_file after realy open ' + fullpath)
 		except:
 			self.log.error('open_file: cant open: ' + fullpath)
 			raise
 
 		of = openFile(username, o_fd, o_stat.st_size, o_file, path, False, False, False)
-		self.log.debug('open_file: fd1 ')
 		open_files_id = hashlib.md5(path).hexdigest()
 		self.openFiles[open_files_id] = of
-		self.log.debug('open_file: good open ')
 
 
-	def get_open_file_info(self, path):
-		self.log.debug('get_open_file_info: ' + path)
+	def getOpenFileInfo(self, path):
 		pe = path.split('/')[1:]
 		level = len(pe)
 		if level != 2 and level != 3:
-			self.log.error('get_open_file_info: pe != 2')
 			return -1
 
 		username = pe[0]
 		filename = pe[1]
 
 		open_files_id = hashlib.md5(path).hexdigest()
-		file = self.openFiles[open_files_id]
+		try:
+		    file = self.openFiles[open_files_id]
+		except KeyError:
+		    return -1
 
 		if file != -1:
-			self.log.debug('get_open_file_info ok: ' + str(file.fd))
 			return file
-		else:
-			self.log.debug('get_open_file_info not ok: ' + path)
 
 		return -1
 
 
 	def completeUpload(self, open_file):
-		self.log.debug('completeUpload: ' + open_file.path)
 		if open_file.upload == False:
-			self.log.debug('completeUpload FACI: ')
 			return
 
 		oldName = open_file.uploadName
@@ -205,7 +200,7 @@ class UP():
 			# get size
 			o_stat = os.stat(oldName)
 
-			justName = hashlib.md5(oldName + str(time())).hexdigest() + '.attach'
+			justName = hashlib.sha1(oldName + str(time())).hexdigest()
 			newName = '/var/upload/' + str(open_file.storeDir) + '/' + justName
 			os.rename(oldName, newName)
 			os.chown(newName, 60, 60)
@@ -217,7 +212,6 @@ class UP():
 			user_id = self.get_user_id(open_file.owner)
 			hidden = self.is_hidden_file(open_file.path)
 
-			self.log.debug('before INSERT: ')
 			# update size in userFiles
 			for _f in self.userFiles[open_file.owner]:
 				if _f.filename == filename:
@@ -231,7 +225,7 @@ class UP():
 			db = upDB()
 
 			c = db.db.cursor()
-			c.execute("INSERT DELAYED INTO up VALUES(NULL, '', %s, NOW(), '0000-00-00 00:00:00', '127.0.0.1', %s, %s, %s, %s, 'application/octet-stream', %s, 0, 7, 0, '', '0000-00-00 00:00:00', '', 0, 0, %s, %s)", (delete_num, justName, sub_location, filename, filename, size, hidden, user_id))
+			c.execute("INSERT DELAYED INTO up VALUES(NULL, '', %s, NOW(), '0000-00-00 00:00:00', '127.0.0.1', %s, %s, %s, %s, 'application/octet-stream', %s, 0, 0, 7, 0, '', '0000-00-00 00:00:00', '', 0, 0, %s, %s)", (delete_num, justName, sub_location, filename, filename, size, hidden, user_id))
 			c.close()
 
 			# update counters
@@ -244,18 +238,15 @@ class UP():
 			for _f in self.userFiles[open_file.owner]:
 				if _f.filename == filename:
 					_f.id = self.get_file_id_from_name(open_file.owner, filename)
-					self.log.debug('cu set id: ' +str(_f.id))
 					break
-
-			self.log.debug('after INSERT: ')
-
 
 		except:
 			self.log.error('completeUpload error')
 
 
+
 	def closeFile(self, path):
-		open_file = self.get_open_file_info(path)
+		open_file = self.getOpenFileInfo(path)
 
 		if open_file == -1:
 			self.log.error('close file empty: ' + path)
@@ -304,7 +295,6 @@ class UP():
 
 		# rename in userFiles
 		for file in self.userFiles[username]:
-			self.log.debug('in rename: ' + str(file.id) + ' ' + file.filename)
 			if file.id == fileID:
 				file.filename = newFilename
 				break
@@ -320,7 +310,7 @@ class UP():
 
 
 
-	def unlink_file(self, path):
+	def unlinkFile(self, path):
 		pf = path.split('/')[1:]
 		level = len(pf)
 		if level != 2 and level != 3:
@@ -353,7 +343,6 @@ class UP():
 
 
 	def get_file_id_from_name(self, username, filename):
-		self.log.debug('get_file_id_from_name: '+username+' '+filename)
 		file_id = -1
 
 		for file in self.userFiles[username]:
@@ -361,10 +350,9 @@ class UP():
 				file_id = file.id
 				break
 
+		# GET FROM DB
 		if file_id == -1:
-			#get from db
 			user_id = self.get_user_id(username)
-			self.log.debug('get_file_id_from_name: '+str(user_id)+' '+filename)
 			db = upDB()
 			c = db.db.cursor()
 			c.execute("SELECT id FROM up WHERE user_id=%s AND filename_fuse=%s LIMIT 1", (user_id, filename))
@@ -434,11 +422,7 @@ class UP():
 		# for 60 sec return cached user lists
 		if ignoreCache == False and username in self.userFilesTimer and int(time() - self.userFilesTimer[username]) < 60:
 			if username in self.userFiles:
-				self.log.debug('get_user_files from cache: ' + username)
 				return self.userFiles[username]
-
-
-		self.log.debug('get_user_files: ' + username)
 
 		try:
 			user_id = str(self.get_user_id(username))
@@ -474,15 +458,12 @@ class UP():
 			username = file['username']
 			filename = file['filename']
 		except:
-			self.log.debug('get_file_info FALSE ' + path)
 			raise
 
 		for file in self.userFiles[username]:
 			if (file.filename) == filename:
-				self.log.debug('get_file_info ok' + path)
 				return file
 
-		self.log.debug('== get_file_info FALSE 2' + path)
 		raise IOError('File not exists: ' + path)
 
 
@@ -527,7 +508,6 @@ class UP():
 				raise
 
 			for file in self.userFiles[pe[0]]:
-				self.log.debug('get_dir_listing hidden: ' + file.filename + ' ' +str(file.hidden))
 				if file.hidden == True:
 					dirListing.append(file.filename)
 
@@ -547,19 +527,23 @@ class UP():
 
 
 	def is_user_file(self, path):
+		self.log.debug('is user file: ' + path)
 		try:
-			file = self.getFileFromPath(path)
-			username = file['username']
-			filename = file['filename']
+			f = self.getFileFromPath(path)
+			username = f['username']
+			filename = f['filename']
 		except:
 			self.log.error('== is_user_file FALSE ' + path)
 			return False
 
-		for file in self.userFiles[username]:
-			self.log.debug('is_user_file: ' + file.filename)
-			if file.filename == filename:
-				return True
-				break
+		try:
+			for file in self.userFiles[username]:
+				if file.filename == filename:
+					self.log.debug('is user file TRUE: ' + path)
+					return True
+					break
+		except KeyError:
+			return False
 
 		return False
 
@@ -577,11 +561,14 @@ class UP():
 
 
 	def createFile(self, path):
+		self.log.debug('createFile: ' + path)
 		if self.is_user_file(path):
+			self.log.debug('createFile: is user file')
 			return -errno.ENOSYS
 
 		pe = path.split('/')[1:]
 		if len(pe) != 2 and len(pe) != 3:
+			self.log.debug('createFile: wrong len')
 			return -errno.ENOSYS
 
 		_f = self.getFileFromPath(path)
@@ -597,21 +584,20 @@ class UP():
 		try:
 			storeDir = self.get_upload_path()
 			fullpath = '/var/upload/' + str(storeDir) + '/tmp_up'
-			o_file = NamedTemporaryFile(mode='w',suffix='.tmp',dir=fullpath,delete=False)
+			ofd,filename = mkstemp(suffix='.tmp',dir=fullpath)
+			o_file = os.fdopen(ofd, 'w')
 			o_fd = o_file.fileno()
 		except:
-			self.log.error('createFile: cant open new file: ')
+			self.log.error('createFile: cant open new file: ' + filename)
 			raise
 		else:
-			of = openFile(username, o_fd, 0, o_file, path, True, o_file.name, storeDir)
+			of = openFile(username, o_fd, 0, o_file, path, True, filename, storeDir)
 			open_files_id = hashlib.md5(path).hexdigest()
 			self.openFiles[open_files_id] = of
-			self.log.debug('open_file: ok id ' + path)
 
 
 
 	def getAttr(self, path):
-		#self.log.debug('getAttr: ' + path)
 		st = MyStat()
 
 		# default uid
@@ -669,8 +655,6 @@ class upFS(Fuse):
 
 
 	def chmod(self, path, mode):
-		self.log.debug('chmod: '+path)
-
 		# /__system__/command
 		pe = path.split('/')[1:]
 		level = len(pe)
@@ -679,14 +663,12 @@ class upFS(Fuse):
 			self.up.runSystemCommand(pe[1])
 
 
-
 	def chown(self, path, user, group):
 		self.log.debug('chown: '+path)
 		pass
 
 
 	def create(self, path, mode, fi=None):
-		self.log.debug('need create: ' + path)
 		try:
 			self.up.createFile(path)
 		except:
@@ -694,9 +676,9 @@ class upFS(Fuse):
 
 
 	def flush(self, path):
-		self.log.debug('flush: '+path)
-		open_file = self.up.get_open_file_info(path)
-		open_file.file.flush()
+		open_file = self.up.getOpenFileInfo(path)
+		if open_file != -1:
+			open_file.file.flush()
 
 
 	def getattr(self, path):
@@ -719,19 +701,19 @@ class upFS(Fuse):
 
 	def open(self, path, flags):
 		try:
-			self.up.open_file(path, flags)
+			self.up.openFile(path, flags)
 		except:
 			self.log.error('open: ' + path)
 			return -errno.ENOENT
 
 
 	def write(self, path, buf, offset):
-		#self.log.debug('write: ' + path)
 		try:
-			open_file = self.up.get_open_file_info(path)
-			open_file.file.seek(offset)
-			open_file.file.write(buf)
-			return len(buf)
+			open_file = self.up.getOpenFileInfo(path)
+			if open_file != -1:
+				open_file.file.seek(offset)
+				open_file.file.write(buf)
+				return len(buf)
 		except:
 			self.log.error('write: ' + path)
 			return 0
@@ -739,7 +721,7 @@ class upFS(Fuse):
 
 	def read(self, path, size, offset):
 		try:
-			open_file = self.up.get_open_file_info(path)
+			open_file = self.up.getOpenFileInfo(path)
 			open_file.file.seek(offset)
 			return open_file.file.read(size)
 		except:
@@ -759,7 +741,7 @@ class upFS(Fuse):
 	def unlink(self, path):
 		self.log.debug('unlink: ' + path)
 		try:
-			return self.up.unlink_file(path)
+			return self.up.unlinkFile(path)
 		except:
 			self.log.error('unlink: ' + path)
 			return -errno.ENOENT
@@ -778,9 +760,6 @@ class upFS(Fuse):
 		self.log.debug('utime: '+path)
 		return 0
 
-	def utimens(self, path, times):
-		self.log.debug('utimens: '+path)
-
 
 	def release(self, path, flags):
 		self.log.debug('release: '+path)
@@ -797,7 +776,6 @@ class upFS(Fuse):
 
 
 	def rename(self, pathfrom, pathto):
-		self.log.debug('rename: ' + pathfrom)
 		try:
 			self.up.renameFile(pathfrom, pathto)
 		except:
@@ -808,6 +786,7 @@ class upFS(Fuse):
 	def statfs(self):
 		st = fuse.StatVfs()
 		st.f_bsize = 512
+		# MAYBE TOO SMALL?
 		st.f_blocks = 4096
 		st.f_favail = 2048
 		st.f_namelen = 255
@@ -817,7 +796,7 @@ class upFS(Fuse):
 
 def main():
 	usage="""
-Userspace filesystem for project up.lluga.net.
+Userspace filesystem for project up.iteam.ua.
 
 """ + Fuse.fusage
 
